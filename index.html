@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PassiveGuard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --g1:#0D0D1A;--g2:#0A0A1F;--g3:#060612;
+  --glass:rgba(255,255,255,0.06);
+  --glass-border:rgba(255,255,255,0.10);
+  --glass-hover:rgba(255,255,255,0.10);
+  --blur:blur(20px);
+  --cyan:#00E5FF;--cyan2:rgba(0,229,255,0.15);--cyan3:rgba(0,229,255,0.07);
+  --green:#00FF9D;--green2:rgba(0,255,157,0.15);
+  --red:#FF4D6D;--red2:rgba(255,77,109,0.15);
+  --amber:#FFB830;--amber2:rgba(255,184,48,0.15);
+  --purple:#A78BFA;--purple2:rgba(167,139,250,0.15);
+  --text:#F0F4FF;--text2:#9BA8C0;--muted:#5A6580;
+  --r:14px;--r-sm:10px;
+}
+html{font-size:14px;}
+body{
+  font-family:'Outfit',sans-serif;
+  background:var(--g1);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── ANIMATED BG ── */
+.bg-orbs{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.25;animation:float 12s ease-in-out infinite;}
+.orb1{width:500px;height:500px;background:radial-gradient(circle,#00E5FF,transparent 70%);top:-100px;left:-100px;animation-delay:0s;}
+.orb2{width:400px;height:400px;background:radial-gradient(circle,#A78BFA,transparent 70%);bottom:-80px;right:-80px;animation-delay:-4s;}
+.orb3{width:350px;height:350px;background:radial-gradient(circle,#00FF9D,transparent 70%);top:40%;left:40%;animation-delay:-8s;opacity:0.15;}
+@keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-20px) scale(1.05)}66%{transform:translate(-20px,30px) scale(0.95)}}
+
+/* ── LAYOUT ── */
+.layout{display:flex;min-height:100vh;position:relative;z-index:1;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:230px;flex-shrink:0;
+  background:rgba(10,10,30,0.7);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  border-right:1px solid var(--glass-border);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:10;
+}
+.sidebar-logo{
+  padding:22px 20px 18px;
+  border-bottom:1px solid var(--glass-border);
+  display:flex;align-items:center;gap:12px;
+}
+.logo-gem{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+  box-shadow:0 0 20px rgba(0,229,255,0.4);
+}
+.logo-name{font-size:16px;font-weight:800;letter-spacing:-0.5px;}
+.logo-name span{color:var(--cyan);}
+.logo-sub{font-size:10px;color:var(--muted);margin-top:1px;font-family:'JetBrains Mono',monospace;}
+
+.nav-section{padding:16px 12px 8px;}
+.nav-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);padding:0 8px;margin-bottom:8px;font-family:'JetBrains Mono',monospace;}
+.nav-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:var(--r-sm);cursor:pointer;
+  font-size:13.5px;font-weight:500;color:var(--text2);
+  border:none;background:transparent;width:100%;text-align:left;
+  transition:all 0.2s;position:relative;overflow:hidden;
+}
+.nav-btn::before{content:'';position:absolute;inset:0;background:var(--glass);opacity:0;transition:opacity 0.2s;border-radius:var(--r-sm);}
+.nav-btn:hover::before{opacity:1;}
+.nav-btn:hover{color:var(--text);}
+.nav-btn.active{
+  background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(167,139,250,0.1));
+  border:1px solid rgba(0,229,255,0.25);
+  color:var(--cyan);font-weight:600;
+  box-shadow:0 0 16px rgba(0,229,255,0.1);
+}
+.nav-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0;}
+
+.sidebar-stats{margin:0 12px 12px;padding:14px;border-radius:var(--r-sm);background:var(--glass);border:1px solid var(--glass-border);}
+.ss-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;}
+.ss-label{color:var(--muted);}
+.ss-val{font-family:'JetBrains Mono',monospace;color:var(--cyan);}
+
+.sidebar-bottom{margin-top:auto;padding:14px 12px;border-top:1px solid var(--glass-border);}
+.theme-pill{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:9px;border-radius:var(--r-sm);cursor:pointer;
+  font-size:12.5px;font-weight:500;color:var(--text2);
+  border:1px solid var(--glass-border);background:var(--glass);
+  transition:all 0.2s;width:100%;
+}
+.theme-pill:hover{border-color:rgba(0,229,255,0.3);color:var(--cyan);}
+
+/* ── MAIN ── */
+.main{margin-left:230px;flex:1;display:flex;flex-direction:column;}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:rgba(10,10,30,0.6);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--glass-border);
+  padding:14px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:5;
+}
+.page-info{}
+.page-title{font-size:17px;font-weight:700;letter-spacing:-0.4px;}
+.page-sub{font-size:11.5px;color:var(--muted);margin-top:1px;}
+.topbar-pills{display:flex;align-items:center;gap:10px;}
+.live-pill{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:20px;
+  background:rgba(0,255,157,0.1);border:1px solid rgba(0,255,157,0.25);
+  font-size:11.5px;font-weight:600;color:var(--green);
+  font-family:'JetBrains Mono',monospace;
+}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pls 1.8s infinite;}
+@keyframes pls{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,255,157,0.4)}50%{opacity:0.5;box-shadow:0 0 0 4px rgba(0,255,157,0)}}
+
+.content{padding:24px 28px;flex:1;}
+.panel{display:none;}.panel.active{display:block;}
+
+/* ── GLASS CARD ── */
+.gcard{
+  background:var(--glass);
+  backdrop-filter:var(--blur);
+  -webkit-backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);
+  border-radius:var(--r);
+  transition:border-color 0.3s,box-shadow 0.3s;
+}
+.gcard:hover{border-color:rgba(255,255,255,0.15);}
+.gcard-head{
+  padding:16px 20px;border-bottom:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.gcard-title{font-size:13.5px;font-weight:600;}
+.gcard-body{padding:20px;}
+
+/* ── GLOW BADGE ── */
+.gbadge{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:20px;font-family:'JetBrains Mono',monospace;letter-spacing:0.5px;}
+.gbadge.cyan  {background:var(--cyan2);color:var(--cyan);border:1px solid rgba(0,229,255,0.25);}
+.gbadge.green {background:var(--green2);color:var(--green);border:1px solid rgba(0,255,157,0.25);}
+.gbadge.red   {background:var(--red2);color:var(--red);border:1px solid rgba(255,77,109,0.25);}
+.gbadge.amber {background:var(--amber2);color:var(--amber);border:1px solid rgba(255,184,48,0.25);}
+.gbadge.muted {background:var(--glass);color:var(--muted);border:1px solid var(--glass-border);}
+
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+.stat-gcard{
+  background:var(--glass);
+  backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);
+  border-radius:var(--r);
+  padding:18px;
+  position:relative;overflow:hidden;
+  transition:all 0.25s;
+}
+.stat-gcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r) var(--r) 0 0;}
+.stat-gcard.cyan::before{background:linear-gradient(90deg,var(--cyan),transparent);}
+.stat-gcard.green::before{background:linear-gradient(90deg,var(--green),transparent);}
+.stat-gcard.amber::before{background:linear-gradient(90deg,var(--amber),transparent);}
+.stat-gcard.purple::before{background:linear-gradient(90deg,var(--purple),transparent);}
+.stat-gcard:hover{background:var(--glass-hover);transform:translateY(-1px);}
+.stat-label{font-size:10.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;}
+.stat-num{font-size:28px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1;}
+.stat-gcard.cyan .stat-num{color:var(--cyan);}
+.stat-gcard.green .stat-num{color:var(--green);}
+.stat-gcard.amber .stat-num{color:var(--amber);}
+.stat-gcard.purple .stat-num{color:var(--purple);}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* ── FORM ── */
+.two-col-wide{display:grid;grid-template-columns:3fr 2fr;gap:20px;}
+.form-group{margin-bottom:16px;}
+.form-label{display:block;font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px;text-transform:uppercase;letter-spacing:0.6px;}
+.form-input{
+  width:100%;
+  background:rgba(255,255,255,0.05);
+  border:1.5px solid rgba(255,255,255,0.1);
+  border-radius:var(--r-sm);padding:11px 14px;color:var(--text);
+  font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;
+  transition:all 0.2s;
+}
+.form-input:focus{border-color:var(--cyan);background:rgba(0,229,255,0.06);box-shadow:0 0 0 3px rgba(0,229,255,0.1);}
+.form-input::placeholder{color:var(--muted);}
+.btn-glow{
+  width:100%;padding:12px;
+  background:linear-gradient(135deg,var(--cyan),#0088FF);
+  color:#000;border:none;border-radius:var(--r-sm);
+  font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;
+  transition:all 0.2s;
+  box-shadow:0 4px 20px rgba(0,229,255,0.35);
+  letter-spacing:0.2px;
+}
+.btn-glow:hover{box-shadow:0 6px 28px rgba(0,229,255,0.5);transform:translateY(-1px);}
+.btn-glow:active{transform:translateY(0);}
+.monitor-strip{
+  display:flex;align-items:center;gap:8px;margin-top:14px;
+  padding:10px 14px;border-radius:var(--r-sm);
+  background:rgba(0,229,255,0.07);border:1px solid rgba(0,229,255,0.2);
+  font-size:12px;color:var(--cyan);font-weight:500;
+}
+
+/* ── SIGNAL TILES ── */
+.signal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.signal-tile{
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--glass-border);
+  border-radius:var(--r-sm);padding:14px;
+  transition:all 0.2s;
+}
+.signal-tile.lit{border-color:rgba(0,229,255,0.4);background:rgba(0,229,255,0.06);box-shadow:0 0 12px rgba(0,229,255,0.1);}
+.signal-name{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;}
+.signal-num{font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--cyan);}
+
+/* ── VERDICT ── */
+.verdict-box{display:none;margin-top:16px;padding:16px;border-radius:var(--r-sm);border:1px solid var(--glass-border);backdrop-filter:var(--blur);}
+.verdict-box.show{display:block;}
+.verdict-box.human{background:rgba(0,255,157,0.08);border-color:rgba(0,255,157,0.3);box-shadow:0 0 20px rgba(0,255,157,0.1);}
+.verdict-box.bot  {background:rgba(255,77,109,0.08);border-color:rgba(255,77,109,0.3);box-shadow:0 0 20px rgba(255,77,109,0.1);}
+.verdict-box.warn {background:rgba(255,184,48,0.08);border-color:rgba(255,184,48,0.3);box-shadow:0 0 20px rgba(255,184,48,0.1);}
+.v-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.v-label{font-size:15px;font-weight:700;}
+.verdict-box.human .v-label{color:var(--green);}
+.verdict-box.bot   .v-label{color:var(--red);}
+.verdict-box.warn  .v-label{color:var(--amber);}
+.v-prob{font-size:11.5px;font-family:'JetBrains Mono',monospace;color:var(--text2);}
+.v-bar{height:5px;border-radius:3px;background:rgba(255,255,255,0.1);overflow:hidden;margin-top:8px;}
+.v-fill{height:100%;border-radius:3px;transition:width 0.7s ease;}
+.human .v-fill{background:linear-gradient(90deg,var(--green),#00D4FF);}
+.bot   .v-fill{background:linear-gradient(90deg,var(--red),#FF8040);}
+.warn  .v-fill{background:linear-gradient(90deg,var(--amber),#FF8040);}
+
+/* ── CHALLENGE ── */
+.chal-box{display:none;margin-top:14px;padding:18px;border-radius:var(--r-sm);background:rgba(255,184,48,0.07);border:1px solid rgba(255,184,48,0.3);text-align:center;}
+.chal-box.show{display:block;}
+.chal-box h4{color:var(--amber);font-size:14px;margin-bottom:6px;}
+.chal-box p{font-size:12px;color:var(--text2);margin-bottom:10px;}
+.chal-math{font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--amber);margin:10px 0;}
+.chal-input{width:90px;text-align:center;font-size:18px;padding:8px;display:block;margin:0 auto 12px;}
+.btn-amber{padding:9px 22px;background:var(--amber);color:#000;border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(255,184,48,0.3);}
+
+/* ── RISK GAUGE ── */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 10px 14px;}
+.gauge-svg{width:210px;height:118px;overflow:visible;}
+.g-track{fill:none;stroke:rgba(255,255,255,0.07);stroke-width:16;stroke-linecap:round;}
+.g-glow {fill:none;stroke-width:20;stroke-linecap:round;opacity:0.15;transition:stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1),stroke 0.5s;}
+.g-fill {fill:none;stroke-width:16;stroke-linecap:round;transition:stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1),stroke 0.5s;}
+.g-val{font-size:30px;font-weight:800;font-family:'JetBrains Mono',monospace;transition:fill 0.5s;}
+.g-lbl{font-size:10px;font-weight:600;font-family:'Outfit',sans-serif;}
+.gauge-labels{display:flex;justify-content:space-between;width:210px;margin-top:4px;}
+.g-edge{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.risk-chip{
+  margin-top:14px;padding:7px 22px;border-radius:20px;
+  font-size:12.5px;font-weight:700;letter-spacing:0.5px;
+  transition:all 0.4s;
+}
+.risk-chip.low    {background:var(--green2);color:var(--green);border:1px solid rgba(0,255,157,0.3);box-shadow:0 0 16px rgba(0,255,157,0.15);}
+.risk-chip.medium {background:var(--amber2);color:var(--amber);border:1px solid rgba(255,184,48,0.3);box-shadow:0 0 16px rgba(255,184,48,0.15);}
+.risk-chip.high   {background:var(--red2);color:var(--red);border:1px solid rgba(255,77,109,0.3);box-shadow:0 0 16px rgba(255,77,109,0.15);}
+.risk-chip.idle   {background:var(--glass);color:var(--muted);border:1px solid var(--glass-border);}
+
+/* ── FEATURE TABLE ── */
+.feat-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+.feat-row:last-child{border-bottom:none;}
+.feat-name{font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;}
+.feat-right{display:flex;align-items:center;gap:8px;}
+.feat-bar{width:55px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+.feat-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--cyan),var(--purple));}
+.feat-val{font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;color:var(--text);min-width:36px;text-align:right;}
+
+/* ── BOT SIM ── */
+.ctrl-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center;}
+.btn-glass{
+  padding:9px 18px;border-radius:var(--r-sm);
+  background:var(--glass);border:1px solid var(--glass-border);
+  color:var(--text2);font-family:'Outfit',sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;
+}
+.btn-glass:hover{background:var(--glass-hover);border-color:rgba(0,229,255,0.3);color:var(--cyan);}
+.btn-glass.danger:hover{border-color:rgba(255,77,109,0.4);color:var(--red);background:var(--red2);}
+.btn-glass.running{background:rgba(255,77,109,0.15);border-color:var(--red);color:var(--red);animation:pulse-r 1.2s infinite;}
+@keyframes pulse-r{0%,100%{box-shadow:0 0 0 0 rgba(255,77,109,0.3)}50%{box-shadow:0 0 0 6px rgba(255,77,109,0)}}
+.spd-sel{padding:9px 14px;border-radius:var(--r-sm);border:1px solid var(--glass-border);background:var(--glass);color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;}
+
+/* ── LOG ── */
+.log-box{background:rgba(0,0,0,0.25);border:1px solid var(--glass-border);border-radius:var(--r-sm);height:300px;overflow-y:auto;}
+.log-box::-webkit-scrollbar{width:3px;}
+.log-box::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px;}
+.log-row{display:grid;grid-template-columns:72px 110px 1fr;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11.5px;font-family:'JetBrains Mono',monospace;transition:background 0.1s;}
+.log-row:hover{background:rgba(255,255,255,0.03);}
+.log-time{color:var(--muted);}
+.log-v{font-weight:600;}
+.log-v.human{color:var(--green);}
+.log-v.bot{color:var(--red);}
+.log-v.warn{color:var(--amber);}
+.log-detail{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rate-wrap{padding:14px 16px 16px;}
+.rate-head{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:8px;font-weight:500;}
+.rate-track{height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;}
+.rate-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--red),#FF8040);transition:width 0.5s ease;box-shadow:0 0 8px rgba(255,77,109,0.4);}
+
+/* ── ANALYTICS ── */
+.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px;}
+.metric-gcard{
+  background:var(--glass);backdrop-filter:var(--blur);
+  border:1px solid var(--glass-border);border-radius:var(--r);
+  padding:22px;text-align:center;transition:all 0.25s;
+  position:relative;overflow:hidden;
+}
+.metric-gcard::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:60%;height:1px;}
+.metric-gcard.blue::after{background:linear-gradient(90deg,transparent,var(--cyan),transparent);}
+.metric-gcard.green::after{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.metric-gcard.red::after{background:linear-gradient(90deg,transparent,var(--red),transparent);}
+.m-val{font-size:44px;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1;}
+.metric-gcard.blue  .m-val{color:var(--cyan);}
+.metric-gcard.green .m-val{color:var(--green);}
+.metric-gcard.red   .m-val{color:var(--red);}
+.m-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin-top:8px;}
+
+/* ── TABLE ── */
+.data-tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+.data-tbl th{padding:11px 16px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);font-family:'JetBrains Mono',monospace;}
+.data-tbl td{padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.05);font-family:'JetBrains Mono',monospace;color:var(--text2);}
+.data-tbl tr:last-child td{border-bottom:none;}
+.data-tbl tr:hover td{background:rgba(255,255,255,0.03);}
+.tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;}
+.tag.human{background:var(--green2);color:var(--green);}
+.tag.bot  {background:var(--red2);color:var(--red);}
+.tag.warn {background:var(--amber2);color:var(--amber);}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.two-col-wide{display:grid;grid-template-columns:3fr 2fr;gap:20px;}
+
+@media(max-width:900px){
+  .sidebar{display:none;}.main{margin-left:0;}
+  .two-col,.two-col-wide,.stats-row,.metric-row{grid-template-columns:1fr;}
+}
+
+/* ── DEMO BUTTONS ── */
+.demo-btn{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;border-radius:var(--r-sm);
+  border:1px solid var(--glass-border);background:var(--glass);
+  cursor:pointer;width:100%;text-align:left;
+  transition:all 0.2s;font-family:'Outfit',sans-serif;
+}
+.demo-btn:hover{transform:translateX(3px);}
+.demo-btn.blocked{border-color:rgba(255,77,109,0.3);background:rgba(255,77,109,0.07);}
+.demo-btn.blocked:hover{border-color:var(--red);background:rgba(255,77,109,0.12);box-shadow:0 0 16px rgba(255,77,109,0.2);}
+.demo-btn.challenged{border-color:rgba(255,184,48,0.3);background:rgba(255,184,48,0.07);}
+.demo-btn.challenged:hover{border-color:var(--amber);background:rgba(255,184,48,0.12);box-shadow:0 0 16px rgba(255,184,48,0.2);}
+.demo-btn.human{border-color:rgba(0,255,157,0.3);background:rgba(0,255,157,0.07);}
+.demo-btn.human:hover{border-color:var(--green);background:rgba(0,255,157,0.12);box-shadow:0 0 16px rgba(0,255,157,0.2);}
+.demo-icon{font-size:20px;flex-shrink:0;}
+.demo-info{flex:1;}
+.demo-title{font-size:13px;font-weight:700;color:var(--text);}
+.demo-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.demo-arrow{font-size:16px;color:var(--muted);flex-shrink:0;}
+.demo-btn.blocked .demo-title{color:var(--red);}
+.demo-btn.challenged .demo-title{color:var(--amber);}
+.demo-btn.human .demo-title{color:var(--green);}
+
+/* ── DEMO RESULT OVERLAY ── */
+.demo-result{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.8);
+  background:rgba(10,10,30,0.95);backdrop-filter:blur(30px);
+  border-radius:20px;padding:36px 44px;text-align:center;
+  z-index:100;opacity:0;pointer-events:none;
+  transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  min-width:320px;
+}
+.demo-result.show{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:all;}
+.demo-result.blocked-style{border:2px solid var(--red);box-shadow:0 0 60px rgba(255,77,109,0.3);}
+.demo-result.challenged-style{border:2px solid var(--amber);box-shadow:0 0 60px rgba(255,184,48,0.3);}
+.demo-result.human-style{border:2px solid var(--green);box-shadow:0 0 60px rgba(0,255,157,0.3);}
+.dr-icon{font-size:56px;margin-bottom:14px;}
+.dr-title{font-size:22px;font-weight:800;margin-bottom:8px;}
+.dr-desc{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px;}
+.dr-score{font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--muted);}
+.dr-close{margin-top:18px;padding:9px 28px;border-radius:20px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text2);cursor:pointer;font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;}
+.demo-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.demo-backdrop.show{opacity:1;pointer-events:all;}
+
+</style>
+</head>
+<body>
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-gem">🛡</div>
+      <div>
+        <div class="logo-name">Passive<span>Guard</span></div>
+        <div class="logo-sub">v2.0 · Enterprise</div>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Platform</div>
+      <button class="nav-btn active" onclick="goPanel('login',this)"><span class="nav-icon">🔐</span>Login Demo</button>
+      <button class="nav-btn" onclick="goPanel('simulator',this)"><span class="nav-icon">🤖</span>Bot Simulator</button>
+      <button class="nav-btn" onclick="goPanel('analytics',this)"><span class="nav-icon">📊</span>Analytics</button>
+    </div>
+    <div class="nav-section" style="margin-top:auto;padding-top:8px;">
+      <div class="sidebar-stats">
+        <div class="nav-label" style="margin-bottom:8px">Session</div>
+        <div class="ss-row"><span class="ss-label">Mouse</span><span class="ss-val" id="ss-m">0</span></div>
+        <div class="ss-row"><span class="ss-label">Keys</span><span class="ss-val" id="ss-k">0</span></div>
+        <div class="ss-row"><span class="ss-label">Requests</span><span class="ss-val" id="ss-r">0</span></div>
+      </div>
+    </div>
+    <div class="sidebar-bottom">
+      <button class="theme-pill" onclick="alert('Already looks amazing in dark! 😄')">🌙 Dark Glassmorphism</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="page-info">
+        <div class="page-title" id="pg-title">Login Demo</div>
+        <div class="page-sub" id="pg-sub">Passive behavioral analysis · Zero friction</div>
+      </div>
+      <div class="topbar-pills">
+        <div class="live-pill"><div class="pulse-dot"></div>ML Active</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══ LOGIN PANEL ══ -->
+      <div class="panel active" id="panel-login">
+        <div class="stats-row">
+          <div class="stat-gcard cyan"><div class="stat-label">Mouse Events</div><div class="stat-num" id="s-mouse">0</div><div class="stat-sub">Captured live</div></div>
+          <div class="stat-gcard green"><div class="stat-label">Keystrokes</div><div class="stat-num" id="s-keys">0</div><div class="stat-sub">Timing analyzed</div></div>
+          <div class="stat-gcard amber"><div class="stat-label">Scroll Events</div><div class="stat-num" id="s-scroll">0</div><div class="stat-sub">Pattern tracked</div></div>
+          <div class="stat-gcard purple"><div class="stat-label">Session Time</div><div class="stat-num" id="s-time">0s</div><div class="stat-sub">Duration</div></div>
+        </div>
+
+        <div class="two-col-wide">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div class="gcard">
+              <div class="gcard-head"><span class="gcard-title">Enterprise Authentication</span><span class="gbadge cyan">PASSIVE MODE</span></div>
+              <div class="gcard-body">
+                <div class="form-group"><label class="form-label">Email Address</label><input type="email" id="email" class="form-input" placeholder="you@enterprise.com" autocomplete="off"></div>
+                <div class="form-group"><label class="form-label">Password</label><input type="password" id="password" class="form-input" placeholder="••••••••••"></div>
+                <button class="btn-glow" onclick="submitLogin()">Sign In →</button>
+                <div class="monitor-strip"><div class="pulse-dot"></div>Behavioral analysis running — no CAPTCHA</div>
+                <div class="verdict-box" id="vbox">
+                  <div class="v-head"><div class="v-label" id="v-label">✅ HUMAN</div><div class="v-prob" id="v-prob"></div></div>
+                  <div class="v-bar"><div class="v-fill" id="v-fill" style="width:0%"></div></div>
+                </div>
+                <div class="chal-box" id="chal-box">
+                  <h4>⚠ Quick Check</h4><p>Signals ambiguous — solve to continue:</p>
+                  <div class="chal-math" id="chal-math"></div>
+                  <input type="number" class="form-input chal-input" id="chal-ans" placeholder="?">
+                  <button class="btn-amber" onclick="checkChal()">Verify →</button>
+                </div>
+              </div>
+            </div>
+            <div class="gcard">
+              <div class="gcard-head"><span class="gcard-title">Signal Breakdown</span><span class="gbadge cyan">14 FEATURES</span></div>
+              <div class="gcard-body" style="padding:10px 20px 14px" id="feat-wrap">
+                <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Submit to see analysis</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div class="gcard">
+              <div class="gcard-head"><span class="gcard-title">Risk Score Meter</span><span class="gbadge muted" id="risk-badge">WAITING</span></div>
+              <div class="gauge-wrap">
+                <svg class="gauge-svg" viewBox="0 0 210 118">
+                  <defs>
+                    <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                  </defs>
+                  <path class="g-track" d="M 25 105 A 85 85 0 0 1 185 105"/>
+                  <path class="g-glow"  id="g-glow" d="M 25 105 A 85 85 0 0 1 185 105" stroke="#E8ECF2" stroke-dasharray="267" stroke-dashoffset="267" filter="url(#glow)"/>
+                  <path class="g-fill"  id="g-fill" d="M 25 105 A 85 85 0 0 1 185 105" stroke="#E8ECF2" stroke-dasharray="267" stroke-dashoffset="267"/>
+                  <text x="105" y="94" text-anchor="middle" class="g-val" id="g-val" fill="#5A6580">—</text>
+                  <text x="105" y="110" text-anchor="middle" class="g-lbl" fill="#5A6580">RISK SCORE</text>
+                </svg>
+                <div class="gauge-labels"><span class="g-edge">SAFE</span><span class="g-edge">MED</span><span class="g-edge">THREAT</span></div>
+                <div class="risk-chip idle" id="risk-chip">AWAITING ANALYSIS</div>
+              </div>
+              <div style="padding:0 16px 18px;display:flex;flex-direction:column;gap:8px;">
+                <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:4px">Live Demo Attacks</div>
+                <button class="demo-btn blocked" onclick="demoBlocked()">
+                  <span class="demo-icon">🚫</span>
+                  <div class="demo-info"><div class="demo-title">Bot — Blocked</div><div class="demo-sub">Zero signals · instant denial</div></div>
+                  <span class="demo-arrow">→</span>
+                </button>
+                <button class="demo-btn challenged" onclick="demoChallenged()">
+                  <span class="demo-icon">⚠️</span>
+                  <div class="demo-info"><div class="demo-title">Bot — Triggers CAPTCHA</div><div class="demo-sub">Partial signals · suspicious score</div></div>
+                  <span class="demo-arrow">→</span>
+                </button>
+                <button class="demo-btn human" onclick="demoHuman()">
+                  <span class="demo-icon">✅</span>
+                  <div class="demo-info"><div class="demo-title">Human — Access Granted</div><div class="demo-sub">Full signals · verified instantly</div></div>
+                  <span class="demo-arrow">→</span>
+                </button>
+              </div>
+            </div>
+            <div class="gcard">
+              <div class="gcard-head"><span class="gcard-title">Live Signals</span></div>
+              <div class="gcard-body" style="padding:14px">
+                <div class="signal-grid">
+                  <div class="signal-tile" id="t-m"><div class="signal-name">Mouse</div><div class="signal-num" id="t-mv">0</div></div>
+                  <div class="signal-tile" id="t-k"><div class="signal-name">Keys</div><div class="signal-num" id="t-kv">0</div></div>
+                  <div class="signal-tile" id="t-s"><div class="signal-name">Scroll</div><div class="signal-num" id="t-sv">0</div></div>
+                  <div class="signal-tile" id="t-c"><div class="signal-name">Clicks</div><div class="signal-num" id="t-cv">0</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SIMULATOR PANEL ══ -->
+      <div class="panel" id="panel-simulator">
+        <div class="gcard" style="margin-bottom:20px">
+          <div class="gcard-head"><span class="gcard-title">Attack Control Panel</span><span class="gbadge muted" id="atk-status">IDLE</span></div>
+          <div class="gcard-body">
+            <div class="ctrl-row">
+              <button class="btn-glass" onclick="fireSingleBot()">🤖 Fire Bot</button>
+              <button class="btn-glass" onclick="fireHuman()">👤 Simulate Human</button>
+              <button class="btn-glass danger" id="btn-atk" onclick="toggleAtk()">⚡ Start Attack</button>
+              <button class="btn-glass" onclick="clearLog()">🗑 Clear</button>
+              <select class="spd-sel" id="atk-speed"><option value="900">Slow</option><option value="400" selected>Medium</option><option value="150">Fast</option></select>
+            </div>
+            <div class="stats-row" style="margin-bottom:0">
+              <div class="stat-gcard green"><div class="stat-label">Humans Passed</div><div class="stat-num" id="sim-h">0</div></div>
+              <div class="stat-gcard" style="--c:var(--red)"><div class="stat-label">Bots Blocked</div><div class="stat-num" style="color:var(--red)" id="sim-b">0</div></div>
+              <div class="stat-gcard amber"><div class="stat-label">Challenged</div><div class="stat-num" id="sim-c">0</div></div>
+              <div class="stat-gcard cyan"><div class="stat-label">Total</div><div class="stat-num" id="sim-t">0</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="gcard">
+            <div class="gcard-head"><span class="gcard-title">Live Attack Log</span></div>
+            <div class="log-box" id="atk-log">
+              <div class="log-row"><span class="log-time">--:--:--</span><span class="log-v" style="color:var(--muted)">IDLE</span><span class="log-detail">Waiting...</span></div>
+            </div>
+            <div class="rate-wrap">
+              <div class="rate-head"><span>Bot Block Rate</span><span id="blk-rate" style="color:var(--red);font-weight:700">—</span></div>
+              <div class="rate-track"><div class="rate-fill" id="blk-bar" style="width:0%"></div></div>
+            </div>
+          </div>
+          <div class="gcard">
+            <div class="gcard-head"><span class="gcard-title">Block Rate Over Time</span></div>
+            <div class="gcard-body" style="height:280px"><canvas id="detChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ANALYTICS PANEL ══ -->
+      <div class="panel" id="panel-analytics">
+        <div class="metric-row">
+          <div class="metric-gcard blue"><div class="m-val" id="a-tot">0</div><div class="m-lbl">Total Analyzed</div></div>
+          <div class="metric-gcard green"><div class="m-val" id="a-h">—</div><div class="m-lbl">Human Pass Rate</div></div>
+          <div class="metric-gcard red"><div class="m-val" id="a-b">—</div><div class="m-lbl">Bot Block Rate</div></div>
+        </div>
+        <div class="two-col" style="margin-bottom:20px">
+          <div class="gcard">
+            <div class="gcard-head"><span class="gcard-title">Verdict Distribution</span></div>
+            <div class="gcard-body" style="display:flex;align-items:center;justify-content:center;height:240px"><canvas id="pieChart" style="max-height:220px;max-width:220px"></canvas></div>
+          </div>
+          <div class="gcard">
+            <div class="gcard-head"><span class="gcard-title">Human Confidence Trend</span></div>
+            <div class="gcard-body" style="height:240px"><canvas id="lineChart"></canvas></div>
+          </div>
+        </div>
+        <div class="gcard">
+          <div class="gcard-head"><span class="gcard-title">Request History</span></div>
+          <div style="overflow-x:auto">
+            <table class="data-tbl">
+              <thead><tr><th>#</th><th>Time</th><th>Source</th><th>Verdict</th><th>Human %</th><th>Bot %</th><th>Action</th></tr></thead>
+              <tbody id="hist"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No data yet</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// NAV
+const pgMeta={login:['Login Demo','Passive behavioral analysis · Zero friction'],simulator:['Bot Simulator','Real-time attack detection engine'],analytics:['Analytics','Session statistics & history']};
+function goPanel(n,el){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  document.getElementById('pg-title').textContent=pgMeta[n][0];
+  document.getElementById('pg-sub').textContent=pgMeta[n][1];
+}
+// COLLECTOR
+const col={mouse_events:[],key_events:[],scroll_events:[],click_events:[],start_time:Date.now(),focus_loss_count:0};
+let mc=0,kc=0,sc=0,clc=0,reqN=0;
+document.addEventListener('mousemove',e=>{col.mouse_events.push({x:e.clientX,y:e.clientY,t:Date.now()});mc++;upSig('t-m','t-mv','s-mouse','ss-m',mc);});
+document.addEventListener('keydown',e=>{col.key_events.push({key:e.key,t:Date.now()});kc++;upSig('t-k','t-kv','s-keys','ss-k',kc);});
+document.addEventListener('wheel',e=>{col.scroll_events.push({delta:e.deltaY,t:Date.now()});sc++;['t-sv','s-scroll'].forEach(id=>document.getElementById(id).textContent=sc);const t=document.getElementById('t-s');t.classList.add('lit');setTimeout(()=>t.classList.remove('lit'),300);});
+document.addEventListener('click',e=>{col.click_events.push({x:e.clientX,y:e.clientY,t:Date.now()});clc++;document.getElementById('t-cv').textContent=clc;});
+window.addEventListener('blur',()=>col.focus_loss_count++);
+setInterval(()=>{const s=Math.floor((Date.now()-col.start_time)/1000);document.getElementById('s-time').textContent=s+'s';},1000);
+function upSig(tid,tv,sv,ssv,val){document.getElementById(tv).textContent=val;document.getElementById(sv).textContent=val;if(document.getElementById(ssv))document.getElementById(ssv).textContent=val;const t=document.getElementById(tid);t.classList.add('lit');setTimeout(()=>t.classList.remove('lit'),300);}
+
+// GAUGE
+function setGauge(riskPct){
+  const total=267,offset=total-(total*riskPct/100);
+  let color;
+  if(riskPct<35)color='#00FF9D';
+  else if(riskPct<65)color='#FFB830';
+  else color='#FF4D6D';
+  const gf=document.getElementById('g-fill'),gg=document.getElementById('g-glow');
+  gf.style.strokeDashoffset=offset;gf.style.stroke=color;
+  gg.style.strokeDashoffset=offset;gg.style.stroke=color;
+  const gv=document.getElementById('g-val');
+  gv.textContent=Math.round(riskPct)+'%';gv.setAttribute('fill',color);
+  const chip=document.getElementById('risk-chip'),badge=document.getElementById('risk-badge');
+  if(riskPct<35){chip.className='risk-chip low';chip.textContent='LOW RISK — HUMAN';badge.className='gbadge green';badge.textContent='SAFE';}
+  else if(riskPct<65){chip.className='risk-chip medium';chip.textContent='MEDIUM — SUSPICIOUS';badge.className='gbadge amber';badge.textContent='CAUTION';}
+  else{chip.className='risk-chip high';chip.textContent='HIGH RISK — BOT';badge.className='gbadge red';badge.textContent='THREAT';}
+}
+
+// LOGIN
+async function submitLogin(){
+  const email=document.getElementById('email').value.trim(),pass=document.getElementById('password').value;
+  if(!email||!pass){alert('Fill both fields!');return;}
+  const payload={...col,time_on_page:(Date.now()-col.start_time)/1000};
+  try{
+    const res=await fetch('/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    showVerdict(data);setGauge(data.bot_probability);
+    recordHist(data,'Login Form');updateAnalytics();
+  }catch(e){alert('Flask not running!');}
+}
+function showVerdict(data){
+  const box=document.getElementById('vbox');box.classList.add('show');
+  document.getElementById('chal-box').classList.remove('show');
+  const lbl=document.getElementById('v-label'),prob=document.getElementById('v-prob'),fill=document.getElementById('v-fill');
+  if(data.verdict==='HUMAN'||data.verdict==='LIKELY_HUMAN'){box.className='verdict-box show human';lbl.textContent='✅ '+data.verdict;}
+  else if(data.verdict==='SUSPICIOUS'){box.className='verdict-box show warn';lbl.textContent='⚠️ SUSPICIOUS';spawnChal();}
+  else{box.className='verdict-box show bot';lbl.textContent='🚫 BOT DETECTED';}
+  prob.textContent='Human: '+data.human_probability+'%  ·  Bot: '+data.bot_probability+'%';
+  fill.style.width=data.human_probability+'%';
+  if(data.features)renderFeats(data.features);
+}
+function renderFeats(f){const vals=Object.values(f),mx=Math.max(...vals,1);document.getElementById('feat-wrap').innerHTML=Object.entries(f).map(([k,v])=>`<div class="feat-row"><span class="feat-name">${k}</span><div class="feat-right"><div class="feat-bar"><div class="feat-fill" style="width:${Math.min(v/mx*100,100)}%"></div></div><span class="feat-val">${v}</span></div></div>`).join('');}
+
+// CHALLENGE
+let chalAns=0;
+function spawnChal(){const a=Math.floor(Math.random()*10)+1,b=Math.floor(Math.random()*10)+1;chalAns=a+b;document.getElementById('chal-math').textContent=`${a} + ${b} = ?`;document.getElementById('chal-ans').value='';document.getElementById('chal-box').classList.add('show');}
+function checkChal(){if(parseInt(document.getElementById('chal-ans').value)===chalAns){document.getElementById('chal-box').classList.remove('show');const box=document.getElementById('vbox');box.className='verdict-box show human';document.getElementById('v-label').textContent='✅ VERIFIED';setGauge(8);}else{alert('Wrong!');spawnChal();}}
+
+// BOT SIM
+let simRun=false,simInt=null,sH=0,sB=0,sC=0,sT=0,dHist=[];
+const botP=()=>({mouse_events:[],key_events:[],scroll_events:[],click_events:[{x:300,y:400,t:1000}],time_on_page:0.1,focus_loss_count:0});
+const humanP=()=>{const t=Date.now();return{mouse_events:Array.from({length:80+Math.floor(Math.random()*80)},(_,i)=>({x:100+i*2+Math.random()*15,y:200+Math.sin(i*0.3)*30,t:t+i*40+Math.random()*15})),key_events:Array.from({length:12+Math.floor(Math.random()*10)},(_,i)=>({key:'x',t:t+1000+i*(130+Math.random()*70)})),scroll_events:[{delta:100,t:t+3000}],click_events:[{x:300,y:400,t:t+2000}],time_on_page:25+Math.random()*50,focus_loss_count:Math.floor(Math.random()*2)};};
+async function fireReq(p,src){try{const r=await fetch('/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});const d=await r.json();addLog(d,src);recordHist(d,src);updSimStats(d);updateAnalytics();}catch(e){}}
+function fireSingleBot(){fireReq(botP(),'🤖 Bot');}
+function fireHuman(){fireReq(humanP(),'👤 Human');}
+function toggleAtk(){
+  simRun=!simRun;const btn=document.getElementById('btn-atk'),st=document.getElementById('atk-status');
+  if(simRun){btn.textContent='⛔ Stop Attack';btn.classList.add('running');st.className='gbadge red';st.textContent='ATTACKING';const spd=parseInt(document.getElementById('atk-speed').value);simInt=setInterval(()=>fireReq(botP(),'🤖 Attack'),spd);}
+  else{btn.textContent='⚡ Start Attack';btn.classList.remove('running');st.className='gbadge muted';st.textContent='IDLE';clearInterval(simInt);simInt=null;}
+}
+function clearLog(){document.getElementById('atk-log').innerHTML='<div class="log-row"><span class="log-time">--:--:--</span><span class="log-v" style="color:var(--muted)">CLEARED</span><span class="log-detail">Log cleared</span></div>';sH=sB=sC=sT=0;dHist=[];['sim-h','sim-b','sim-c','sim-t'].forEach(id=>document.getElementById(id).textContent='0');document.getElementById('blk-rate').textContent='—';document.getElementById('blk-bar').style.width='0%';if(detChart){detChart.data.labels=[];detChart.data.datasets[0].data=[];detChart.update();}}
+function addLog(d,src){const log=document.getElementById('atk-log'),now=new Date().toLocaleTimeString('en',{hour12:false}),cls=d.verdict==='HUMAN'||d.verdict==='LIKELY_HUMAN'?'human':d.verdict==='SUSPICIOUS'?'warn':'bot';const row=document.createElement('div');row.className='log-row';row.innerHTML=`<span class="log-time">${now}</span><span class="log-v ${cls}">${d.verdict}</span><span class="log-detail">${src} · ${d.human_probability}% human</span>`;log.insertBefore(row,log.firstChild);while(log.children.length>80)log.removeChild(log.lastChild);}
+function updSimStats(d){sT++;const v=d.verdict;if(v==='HUMAN'||v==='LIKELY_HUMAN')sH++;else if(v==='SUSPICIOUS')sC++;else sB++;['sim-h','sim-b','sim-c','sim-t'].forEach((id,i)=>document.getElementById(id).textContent=[sH,sB,sC,sT][i]);const r=sT>0?Math.round(sB/sT*100):0;document.getElementById('blk-rate').textContent=r+'%';document.getElementById('blk-bar').style.width=r+'%';dHist.push(r);if(dHist.length>20)dHist.shift();if(detChart){detChart.data.labels=dHist.map((_,i)=>i+1);detChart.data.datasets[0].data=dHist;detChart.update();}}
+
+// HISTORY
+let allH=[],rN=0;
+function recordHist(d,src){rN++;reqN++;document.getElementById('ss-r').textContent=reqN;allH.unshift({n:rN,time:new Date().toLocaleTimeString('en',{hour12:false}),src,verdict:d.verdict,human:d.human_probability,bot:d.bot_probability,action:d.action});if(allH.length>50)allH.pop();updHistTable();updPie();updLine();}
+function updHistTable(){const t=document.getElementById('hist');if(!allH.length){t.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">No data yet</td></tr>';return;}const cls=v=>v==='HUMAN'||v==='LIKELY_HUMAN'?'human':v==='SUSPICIOUS'?'warn':'bot';t.innerHTML=allH.slice(0,25).map(r=>`<tr><td style="color:var(--muted)">#${r.n}</td><td>${r.time}</td><td>${r.src}</td><td><span class="tag ${cls(r.verdict)}">${r.verdict}</span></td><td style="color:var(--green)">${r.human}%</td><td style="color:var(--red)">${r.bot}%</td><td style="color:var(--muted)">${r.action}</td></tr>`).join('');}
+function updateAnalytics(){const tot=allH.length;document.getElementById('a-tot').textContent=tot;if(!tot)return;const h=allH.filter(r=>r.verdict==='HUMAN'||r.verdict==='LIKELY_HUMAN').length,b=allH.filter(r=>r.verdict==='BOT').length;document.getElementById('a-h').textContent=Math.round(h/tot*100)+'%';document.getElementById('a-b').textContent=Math.round(b/tot*100)+'%';}
+
+// CHARTS
+let detChart=null,pieChart=null,lineChart=null;
+function initCharts(){
+  const gc='rgba(255,255,255,0.06)',tc='#5A6580';
+  detChart=new Chart(document.getElementById('detChart'),{type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#FF4D6D',backgroundColor:'rgba(255,77,109,0.08)',tension:0.4,fill:true,pointRadius:3,pointBackgroundColor:'#FF4D6D'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{min:0,max:100,ticks:{color:tc,font:{family:'JetBrains Mono',size:10}},grid:{color:gc}}}}});
+  pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Human','Suspicious','Bot'],datasets:[{data:[1,1,1],backgroundColor:['#00FF9D','#FFB830','#FF4D6D'],borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:true,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:tc,font:{family:'Outfit',size:11},padding:14}}}}});
+  lineChart=new Chart(document.getElementById('lineChart'),{type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#00FF9D',backgroundColor:'rgba(0,255,157,0.07)',tension:0.4,fill:true,pointRadius:2,pointBackgroundColor:'#00FF9D'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{min:0,max:100,ticks:{color:tc,font:{family:'JetBrains Mono',size:10}},grid:{color:gc}}}}});
+}
+function updPie(){if(!pieChart)return;const h=allH.filter(r=>r.verdict==='HUMAN'||r.verdict==='LIKELY_HUMAN').length,s=allH.filter(r=>r.verdict==='SUSPICIOUS').length,b=allH.filter(r=>r.verdict==='BOT').length;pieChart.data.datasets[0].data=[h||1,s||1,b||1];pieChart.update();}
+function updLine(){if(!lineChart)return;const l=allH.slice(0,20).reverse();lineChart.data.labels=l.map((_,i)=>i+1);lineChart.data.datasets[0].data=l.map(r=>r.human);lineChart.update();}
+
+// DEMO FUNCTIONS
+async function demoBlocked(){
+  const p={mouse_events:[],key_events:[],scroll_events:[],click_events:[{x:300,y:400,t:1000}],time_on_page:0.1,focus_loss_count:0};
+  try{
+    const res=await fetch('/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    const d=await res.json();
+    setGauge(d.bot_probability);
+    showDemoResult('blocked-style','🚫','BOT BLOCKED','Zero mouse movement detected. No keystrokes. Instant denial — no CAPTCHA shown.',d.human_probability,d.bot_probability);
+    recordHist(d,'🚫 Demo Bot');updateAnalytics();
+  }catch(e){alert('Flask not running!');}
+}
+async function demoChallenged(){
+  const t=Date.now();
+  // Partial bot — some mouse but very fast, robotic typing
+  const p={
+    mouse_events:[{x:100,y:200,t:t},{x:300,y:200,t:t+50},{x:300,y:400,t:t+100}],
+    key_events:[{key:'a',t:t+200},{key:'b',t:t+205},{key:'c',t:t+210}],
+    scroll_events:[],
+    click_events:[{x:300,y:400,t:t+300}],
+    time_on_page:1.8,
+    focus_loss_count:0
+  };
+  try{
+    const res=await fetch('/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    const d=await res.json();
+    setGauge(d.bot_probability);
+    showDemoResult('challenged-style','⚠️','CAPTCHA TRIGGERED','Suspicious robotic behavior detected. Bot bypassed passive check — fallback challenge activated.',d.human_probability,d.bot_probability);
+    recordHist(d,'⚠️ Demo Sneaky Bot');updateAnalytics();
+  }catch(e){alert('Flask not running!');}
+}
+async function demoHuman(){
+  const t=Date.now();
+  const p={
+    mouse_events:Array.from({length:120},(_,i)=>({x:100+i*1.5+Math.random()*12,y:200+Math.sin(i*0.25)*40+Math.random()*8,t:t+i*38+Math.random()*18})),
+    key_events:Array.from({length:18},(_,i)=>({key:'x',t:t+800+i*(140+Math.random()*90)})),
+    scroll_events:[{delta:100,t:t+3000},{delta:60,t:t+5000}],
+    click_events:[{x:320,y:410,t:t+2200}],
+    time_on_page:38+Math.random()*20,
+    focus_loss_count:0
+  };
+  try{
+    const res=await fetch('/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    const d=await res.json();
+    setGauge(d.bot_probability);
+    showDemoResult('human-style','✅','ACCESS GRANTED','Natural mouse movement, organic typing rhythm, normal session duration. Verified as human — no friction.',d.human_probability,d.bot_probability);
+    recordHist(d,'✅ Demo Human');updateAnalytics();
+  }catch(e){alert('Flask not running!');}
+}
+function showDemoResult(cls,icon,title,desc,hp,bp){
+  const r=document.getElementById('demo-result'),b=document.getElementById('demo-backdrop');
+  r.className='demo-result show '+cls;
+  document.getElementById('dr-icon').textContent=icon;
+  document.getElementById('dr-title').textContent=title;
+  document.getElementById('dr-desc').textContent=desc;
+  document.getElementById('dr-score').textContent='Human: '+hp+'%  ·  Bot: '+bp+'%';
+  b.classList.add('show');
+}
+function closeDemo(){
+  document.getElementById('demo-result').classList.remove('show');
+  document.getElementById('demo-backdrop').classList.remove('show');
+}
+
+window.addEventListener('load',initCharts);
+</script>
+
+<!-- DEMO RESULT OVERLAY -->
+<div class="demo-backdrop" id="demo-backdrop" onclick="closeDemo()"></div>
+<div class="demo-result" id="demo-result">
+  <div class="dr-icon" id="dr-icon">🚫</div>
+  <div class="dr-title" id="dr-title">BOT BLOCKED</div>
+  <div class="dr-desc" id="dr-desc">No behavioral signals detected.</div>
+  <div class="dr-score" id="dr-score">Human: 2% · Bot: 98%</div>
+  <button class="dr-close" onclick="closeDemo()">Dismiss</button>
+</div>
+
+</body>
+</html>

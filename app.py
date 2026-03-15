@@ -161,8 +161,20 @@ def verify():
             (time_on_page < 0.5)
         )
 
+        # Sneaky bot: straight mouse + robotic typing (2ms intervals) + short session
+        sneaky_bot = False
+        if not rule_bot and key_count >= 3 and time_on_page < 1.5:
+            if len(data.get("key_events", [])) >= 3:
+                kevents = data.get("key_events", [])
+                gaps = [kevents[i]["t"] - kevents[i-1]["t"] for i in range(1, len(kevents))]
+                avg_gap = sum(gaps) / len(gaps) if gaps else 999
+                if avg_gap < 15:  # typing every <15ms = robotic
+                    sneaky_bot = True
+
         if rule_bot:
             human_prob, bot_prob = 0.02, 0.98
+        elif sneaky_bot:
+            human_prob, bot_prob = 0.35, 0.65  # SUSPICIOUS range → triggers challenge
         else:
             prob = model.predict_proba(np.array(features).reshape(1,-1))[0]
             human_prob, bot_prob = float(prob[1]), float(prob[0])

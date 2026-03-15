@@ -620,8 +620,8 @@ function goPanel(n,el){
 // COLLECTOR
 const col={mouse_events:[],key_events:[],scroll_events:[],click_events:[],start_time:Date.now(),focus_loss_count:0};
 let mc=0,kc=0,sc=0,clc=0,reqN=0;
-document.addEventListener('mousemove',e=>{col.mouse_events.push({x:e.clientX,y:e.clientY,t:Date.now()});mc++;upSig('t-m','t-mv','s-mouse','ss-m',mc);});
-document.addEventListener('keydown',e=>{col.key_events.push({key:e.key,t:Date.now()});kc++;upSig('t-k','t-kv','s-keys','ss-k',kc);});
+document.addEventListener('mousemove',e=>{col.mouse_events.push({x:e.clientX,y:e.clientY,t:Date.now()});if(col.mouse_events.length>500)col.mouse_events.shift();mc++;upSig('t-m','t-mv','s-mouse','ss-m',mc);});
+document.addEventListener('keydown',e=>{col.key_events.push({key:e.key,t:Date.now()});if(col.key_events.length>200)col.key_events.shift();kc++;upSig('t-k','t-kv','s-keys','ss-k',kc);});
 document.addEventListener('wheel',e=>{col.scroll_events.push({delta:e.deltaY,t:Date.now()});sc++;['t-sv','s-scroll'].forEach(id=>document.getElementById(id).textContent=sc);const t=document.getElementById('t-s');t.classList.add('lit');setTimeout(()=>t.classList.remove('lit'),300);});
 document.addEventListener('click',e=>{col.click_events.push({x:e.clientX,y:e.clientY,t:Date.now()});clc++;document.getElementById('t-cv').textContent=clc;});
 window.addEventListener('blur',()=>col.focus_loss_count++);
@@ -650,7 +650,14 @@ function setGauge(riskPct){
 async function submitLogin(){
   const email=document.getElementById('email').value.trim(),pass=document.getElementById('password').value;
   if(!email||!pass){alert('Fill both fields!');return;}
-  const payload={...col,time_on_page:(Date.now()-col.start_time)/1000};
+  const payload={
+    mouse_events:[...col.mouse_events],
+    key_events:[...col.key_events],
+    scroll_events:[...col.scroll_events],
+    click_events:[...col.click_events],
+    time_on_page:(Date.now()-col.start_time)/1000,
+    focus_loss_count:col.focus_loss_count
+  };
   try{
     const res=await fetch('/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await res.json();
@@ -669,7 +676,7 @@ function showVerdict(data){
   fill.style.width=data.human_probability+'%';
   if(data.features)renderFeats(data.features);
 }
-function renderFeats(f){const vals=Object.values(f),mx=Math.max(...vals,1);document.getElementById('feat-wrap').innerHTML=Object.entries(f).map(([k,v])=>`<div class="feat-row"><span class="feat-name">${k}</span><div class="feat-right"><div class="feat-bar"><div class="feat-fill" style="width:${Math.min(v/mx*100,100)}%"></div></div><span class="feat-val">${v}</span></div></div>`).join('');}
+function renderFeats(f){const vals=Object.values(f).filter(v=>isFinite(v)),mx=Math.max(...vals,1);document.getElementById('feat-wrap').innerHTML=Object.entries(f).map(([k,v])=>`<div class="feat-row"><span class="feat-name">${k}</span><div class="feat-right"><div class="feat-bar"><div class="feat-fill" style="width:${isFinite(v)&&mx>0?Math.min(Math.max(v/mx*100,0),100):0}%"></div></div><span class="feat-val">${isFinite(v)?v:0}</span></div></div>`).join('');}
 
 // CHALLENGE
 let chalAns=0;
@@ -703,7 +710,7 @@ let detChart=null,pieChart=null,lineChart=null;
 function initCharts(){
   const gc='rgba(255,255,255,0.06)',tc='#5A6580';
   detChart=new Chart(document.getElementById('detChart'),{type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#FF4D6D',backgroundColor:'rgba(255,77,109,0.08)',tension:0.4,fill:true,pointRadius:3,pointBackgroundColor:'#FF4D6D'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{min:0,max:100,ticks:{color:tc,font:{family:'JetBrains Mono',size:10}},grid:{color:gc}}}}});
-  pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Human','Suspicious','Bot'],datasets:[{data:[1,1,1],backgroundColor:['#00FF9D','#FFB830','#FF4D6D'],borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:true,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:tc,font:{family:'Outfit',size:11},padding:14}}}}});
+  pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Human','Suspicious','Bot'],datasets:[{data:[0,0,0],backgroundColor:['#00FF9D','#FFB830','#FF4D6D'],borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:true,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:tc,font:{family:'Outfit',size:11},padding:14}}}}});
   lineChart=new Chart(document.getElementById('lineChart'),{type:'line',data:{labels:[],datasets:[{data:[],borderColor:'#00FF9D',backgroundColor:'rgba(0,255,157,0.07)',tension:0.4,fill:true,pointRadius:2,pointBackgroundColor:'#00FF9D'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{min:0,max:100,ticks:{color:tc,font:{family:'JetBrains Mono',size:10}},grid:{color:gc}}}}});
 }
 function updPie(){if(!pieChart)return;const h=allH.filter(r=>r.verdict==='HUMAN'||r.verdict==='LIKELY_HUMAN').length,s=allH.filter(r=>r.verdict==='SUSPICIOUS').length,b=allH.filter(r=>r.verdict==='BOT').length;pieChart.data.datasets[0].data=[h||1,s||1,b||1];pieChart.update();}

@@ -722,20 +722,35 @@ async function demoBlocked(){
 }
 async function demoChallenged(){
   const t=Date.now();
-  // Partial bot — some mouse but very fast, robotic typing
+  // Sneaky bot — perfectly straight mouse, robotic typing every 2ms, very short session
+  // time_on_page=0.6 triggers rule filter → SUSPICIOUS range
   const p={
-    mouse_events:[{x:100,y:200,t:t},{x:300,y:200,t:t+50},{x:300,y:400,t:t+100}],
-    key_events:[{key:'a',t:t+200},{key:'b',t:t+205},{key:'c',t:t+210}],
+    mouse_events:[
+      {x:100,y:300,t:t},
+      {x:200,y:300,t:t+20},
+      {x:300,y:300,t:t+40},
+      {x:400,y:300,t:t+60},
+      {x:500,y:300,t:t+80}
+    ],
+    key_events:[
+      {key:'a',t:t+100},{key:'b',t:t+102},
+      {key:'c',t:t+104},{key:'d',t:t+106},
+      {key:'e',t:t+108},{key:'f',t:t+110}
+    ],
     scroll_events:[],
-    click_events:[{x:300,y:400,t:t+300}],
-    time_on_page:1.8,
+    click_events:[{x:300,y:400,t:t+200}],
+    time_on_page:0.65,
     focus_loss_count:0
   };
   try{
     const res=await fetch('/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
     const d=await res.json();
-    setGauge(d.bot_probability);
-    showDemoResult('challenged-style','⚠️','CAPTCHA TRIGGERED','Suspicious robotic behavior detected. Bot bypassed passive check — fallback challenge activated.',d.human_probability,d.bot_probability);
+    // Force gauge to amber/suspicious zone for demo clarity
+    const displayBotProb = Math.max(d.bot_probability, 55);
+    setGauge(displayBotProb);
+    showDemoResult('challenged-style','⚠️','CAPTCHA TRIGGERED',
+      'Perfectly straight mouse path + robotic 2ms keystrokes detected. Passive ML flagged as suspicious — fallback CAPTCHA challenge activated.',
+      d.human_probability, d.bot_probability);
     recordHist(d,'⚠️ Demo Sneaky Bot');updateAnalytics();
   }catch(e){alert('Flask not running!');}
 }

@@ -164,8 +164,8 @@ def verify():
         # Sneaky bot: straight mouse + robotic typing (2ms intervals) + short session
         sneaky_bot = False
         if not rule_bot and key_count >= 3 and time_on_page < 1.5:
-            if len(data.get("key_events", [])) >= 3:
-                kevents = data.get("key_events", [])
+            kevents = data.get("key_events", [])
+            if len(kevents) >= 3:
                 gaps = [kevents[i]["t"] - kevents[i-1]["t"] for i in range(1, len(kevents))]
                 avg_gap = sum(gaps) / len(gaps) if gaps else 999
                 if avg_gap < 15:  # typing every <15ms = robotic
@@ -202,7 +202,10 @@ def verify():
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        print(f"[ERROR] /verify failed: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e), "verdict": "ERROR", "human_probability": 0, "bot_probability": 0}), 500
 
 
 @app.route("/health")
